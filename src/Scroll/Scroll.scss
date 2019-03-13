@@ -1,0 +1,37 @@
+.scroll {
+  position: absolute;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 57px;
+  user-select: none;
+
+  .leftHand, .rightHand, .centerHand {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  .leftHand, .rightHand {
+    width: 6px;
+    cursor: ew-resize;
+  }
+
+  .centerHand {
+    width: auto;
+    cursor: pointer;
+    cursor: grab;
+  }
+}
+
+.cursor-resize {
+  cursor: ew-resize;
+}
+
+.cursor-grabbing {
+  cursor: pointer;
+  cursor: grabbing;
+}

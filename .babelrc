@@ -1,3 +1,8 @@
 {
-  "presets": ["airbnb"]
+  "presets": ["airbnb"],
+  "plugins": [
+    ["@babel/plugin-transform-template-literals", {
+      "loose": true
+    }]
+  ]
 }

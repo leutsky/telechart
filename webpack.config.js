@@ -5,7 +5,9 @@ const distDir = path.resolve(__dirname, 'dist');
 
 module.exports = {
   mode: 'development',
-  entry: './src/telechart.js',
+  entry: {
+    main: './src/index.js',
+  },
   output: {
     filename: 'main.js',
     path: distDir,
@@ -16,6 +18,25 @@ module.exports = {
         test: /\.js$/,
         exclude: /node_modules/,
         use: 'babel-loader',
+      },
+      {
+        test: /\.scss$/,
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              url: true,
+              modules: true,
+              localIdentName: '[local]', // ___[hash:base64:5]
+            },
+          },
+          'sass-loader',
+        ],
+      },
+      {
+        test: /\.svg$/,
+        use: 'url-loader',
       },
     ],
   },

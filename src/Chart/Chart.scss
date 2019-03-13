@@ -1,0 +1,113 @@
+.chartWrap {
+  font-family: "Helvetica Neue", Helvetica, Arial , Verdana, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.light,
+.light .bubble {
+  background-color: #ffffff;
+  color: #1E1E1E;
+}
+
+.dark,
+.dark .bubble {
+  background-color: #262F3D;
+  color: #ffffff;
+}
+
+.noData {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding-top: 200px;
+
+  font-size: 48px;
+  text-align: center;
+
+  .light & {
+    background-color: #F6F9FB;
+    color: rgba(0, 0, 0, .1);
+  }
+
+  .dark & {
+    background-color: #212A37;
+    color: rgba(255, 255, 255, .1);
+  }
+}
+
+.header {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.charts {
+  position: relative;
+
+  height: 525px;
+  width: 100%;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cursorZone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 420px;
+}
+
+.bubble {
+  border-radius: 6px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, .3), 0 1px 2px rgba(0, 0, 0, .3);
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 8px 15px;
+  pointer-events: none;
+
+  .dark & {
+    box-shadow: 0 0 1px rgba(0, 0, 0, .5), 0 1px 2px rgba(0, 0, 0, .5);
+  }
+}
+
+.bubbleWrap {
+  // empty
+}
+
+.bubbleDate {
+  font-size: 17px;
+}
+
+.bubbleContent {
+  display: flex;
+  margin-top: 10px;
+}
+
+.bubbleItem {
+  flex-shrink: 0;
+  font-size: 13px;
+
+  & + & {
+    margin-left: 20px;
+  }
+}
+
+.bubbleVal {
+  font-size: 20px;
+  font-weight: 400;
+}
