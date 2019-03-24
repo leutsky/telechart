@@ -2,13 +2,13 @@ import {
   drawScroll,
 } from '../drawing';
 import {
+  addClass, removeClass,
   showEl,
   hideEl,
   createEl,
   onEvent,
   offEvent,
   getPageX,
-  getPixelRatio,
   bindObjectMethods, createViewport,
 } from '../utils';
 
@@ -105,6 +105,7 @@ export default class Scroll {
       this.prevPageX = getPageX(event);
       this.attachMoveEvents();
       hideEl(this.$el);
+      addClass(this.$el.parentNode, styles.cursorGrabbing);
     }
   }
 
@@ -127,6 +128,7 @@ export default class Scroll {
     this.detachMoveEvents();
     this.redrawControls();
     showEl(this.$el);
+    removeClass(this.$el.parentNode, styles.cursorGrabbing);
   }
 
   applyDelta(delta) {
