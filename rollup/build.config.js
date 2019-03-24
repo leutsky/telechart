@@ -6,11 +6,12 @@ import resolve from 'rollup-plugin-node-resolve';
 import { terser } from 'rollup-plugin-terser';
 import babel from 'rollup-plugin-babel';
 
-module.exports = {
+export default {
   input: './src/index.js',
   output: {
-    file: 'dist/bundle.js',
-    format: 'cjs',
+    file: 'dist/chart.js',
+    format: 'umd',
+    name: 'Chart', // Simple just this project
   },
   plugins: [
     analyze(),
@@ -26,13 +27,9 @@ module.exports = {
       minimize: true,
     }),
     json(),
-    babel({
-      exclude: 'node_modules/**',
-    }),
+    // babel(),
     terser({
-      compress: {
-
-      },
+      compress: true,
     }),
   ],
 };

@@ -4,7 +4,7 @@ const TYPE_X = 'x';
 //   month: 'short',
 // };
 const FIRST_INDEX = 1;
-const X_LABEL_WIDTH = 70;
+const X_LABEL_WIDTH = 80;
 
 const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

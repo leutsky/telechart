@@ -3,6 +3,10 @@
 **The Chart** is software for showing simple charts. Based on canvas. 
 Supports web and mobile.
 
+IE isn't supported (need make another build config: es6 -> es5)
+
+Demo: https://aleutsky.github.io/telechart/demo/index.html
+
 ```javascript
 import Chart from './src/Chart';
 

@@ -60,7 +60,9 @@
   }
 
   &:after {
-    background: url('./check.svg') center no-repeat;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg%20width%3D%2716%27%20height%3D%2716%27%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%3E%3Cpath%20stroke%3D%27%23fff%27%20stroke-width%3D%273%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%20d%3D%27M2%209l4%204l8-9%27%20fill%3D%27none%27%3E%3C%2Fpath%3E%3C%2Fsvg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
     background-size: 0%;
   }
 }
