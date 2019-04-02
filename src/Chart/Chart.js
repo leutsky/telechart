@@ -60,6 +60,10 @@ function bubbleTpl(dataset, index) {
   dataset.order.forEach((id) => {
     const data = dataset.data[id];
 
+    if (!data.visible) {
+      return;
+    }
+
     items += `<div class="${styles.bubbleItem}" style="color: ${data.color};"><div class="${styles.bubbleVal}">${data.column[index]}</div>${data.name}</div>`;
   });
 
