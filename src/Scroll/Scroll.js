@@ -1,15 +1,7 @@
 import {
-  drawScroll,
-} from '../drawing';
-import {
-  addClass, removeClass,
-  showEl,
-  hideEl,
-  createEl,
-  onEvent,
-  offEvent,
-  getPageX,
-  bindObjectMethods, createViewport,
+  createEl, addClass, removeClass,
+  onEvent, offEvent, getPageX,
+  bindObjectMethods, createViewport, getContext, rAF,
 } from '../utils';
 
 import styles from './Scroll.scss';
@@ -19,43 +11,39 @@ const hands = {
   [styles.rightHand]: true,
   [styles.centerHand]: true,
 };
-const sideSliderWidth = 6;
-
-function scrollTpl() {
-  const $el = createEl('div', styles.scroll);
-  const $leftHand = createEl('div', styles.leftHand);
-  const $rightHand = createEl('div', styles.rightHand);
-  const $centerHand = createEl('div', styles.centerHand);
-
-  $el.appendChild($leftHand);
-  $el.appendChild($rightHand);
-  $el.appendChild($centerHand);
-
-  return {
-    $el,
-    $leftHand,
-    $rightHand,
-    $centerHand,
-  };
-}
+const sideSliderWidth = 15;
 
 export default class Scroll {
-  constructor(ctx, range, minRange, onChange) {
-    this.ctx = ctx;
-
-    Object.assign(this, scrollTpl());
-
+  constructor(range, minRange, onChange) {
+    this.themeName = null;
     this.range = range;
     this.minRange = minRange;
     this.state = { left: 0, right: 0 };
+    this.visible = true;
 
     this.activeControl = null;
     this.prevPageX = null;
     this.onChange = onChange;
 
+    this.initDom();
+
     bindObjectMethods(this, ['handleMove', 'handleMoveEnd', 'handleMoveStart']);
 
     onEvent(this.$el, 'mousedown,touchstart', this.handleMoveStart);
+  }
+
+  initDom() {
+    this.$el = createEl('div', styles.scroll);
+    this.$canvas = createEl('canvas', styles.canvas);
+    this.$leftCover = createEl('div', styles.cover);
+    this.$rightCover = createEl('div', styles.cover);
+    this.$slider = createEl('div', styles.slider);
+    this.$slider.innerHTML = `<div class="${styles.leftHand}"></div><div class="${styles.rightHand}"></div><div class="${styles.centerHand}"></div>`;
+
+    this.$el.appendChild(this.$canvas);
+    this.$el.appendChild(this.$leftCover);
+    this.$el.appendChild(this.$rightCover);
+    this.$el.appendChild(this.$slider);
   }
 
   destroy() {
@@ -72,7 +60,6 @@ export default class Scroll {
     this.leftMin = sideSliderWidth;
     this.rightMax = this.width + sideSliderWidth;
     this.updateState();
-    this.redrawSlider();
     this.redrawControls();
   }
 
@@ -85,6 +72,20 @@ export default class Scroll {
   updateRange() {
     this.range[0] = (this.state.left - sideSliderWidth) / this.width;
     this.range[1] = (this.state.right - sideSliderWidth) / this.width;
+  }
+
+  setTheme(themeName) {
+    if (this.themeName) {
+      removeClass(this.$el, styles[this.themeName]);
+    }
+
+    addClass(this.$el, styles[themeName]);
+    this.themeName = themeName;
+  }
+
+  setRange(range) {
+    this.range = range;
+    this.updateState();
   }
 
   attachMoveEvents() {
@@ -104,8 +105,6 @@ export default class Scroll {
       this.activeControl = className;
       this.prevPageX = getPageX(event);
       this.attachMoveEvents();
-      hideEl(this.$el);
-      addClass(this.$el.parentNode, styles.cursorGrabbing);
     }
   }
 
@@ -119,6 +118,7 @@ export default class Scroll {
         this.prevPageX += appliedDelta;
         this.updateRange();
         this.onChange(this.range);
+        rAF(() => this.redrawControls());
       }
     }
   }
@@ -126,9 +126,6 @@ export default class Scroll {
   handleMoveEnd() {
     this.activeControl = null;
     this.detachMoveEvents();
-    this.redrawControls();
-    showEl(this.$el);
-    removeClass(this.$el.parentNode, styles.cursorGrabbing);
   }
 
   applyDelta(delta) {
@@ -179,16 +176,12 @@ export default class Scroll {
     return appliedDelta;
   }
 
-  redrawSlider() {
-    drawScroll(this.ctx, this.state, sideSliderWidth, this.vp, this.theme);
-  }
-
   redrawControls() {
+    const { $slider, $leftCover, $rightCover, width } = this;
     const { left, right } = this.state;
 
-    this.$leftHand.style.left = `${left - sideSliderWidth}px`;
-    this.$rightHand.style.left = `${right}px`;
-    this.$centerHand.style.left = `${left}px`;
-    this.$centerHand.style.width = `${right - left}px`;
+    $slider.style.cssText = `left:${left - sideSliderWidth}px; right: ${width - right + sideSliderWidth}px`;
+    $leftCover.style.right = `${width - left + 2 * sideSliderWidth}px`;
+    $rightCover.style.left = `${right}px`;
   }
 }

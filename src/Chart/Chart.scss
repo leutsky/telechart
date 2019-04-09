@@ -1,17 +1,17 @@
 .chartWrap {
   font-family: "Helvetica Neue", Helvetica, Arial , Verdana, sans-serif;
+  position: relative;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.light,
-.light .bubble {
+.day,
+.day .bubble {
   background-color: #ffffff;
   color: #1E1E1E;
 }
 
-.dark,
-.dark .bubble {
+.night {
   background-color: #262F3D;
   color: #ffffff;
 }
@@ -30,27 +30,37 @@
   font-size: 48px;
   text-align: center;
 
-  .light & {
+  .day & {
     background-color: #F6F9FB;
     color: rgba(0, 0, 0, .1);
   }
 
-  .dark & {
+  .night & {
     background-color: #212A37;
     color: rgba(255, 255, 255, .1);
   }
 }
 
 .header {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   margin-bottom: 16px;
+  position: relative;
+}
+
+.range {
+  font-size: 18px;
+  font-weight: bold;
+  left: auto;
+  position: absolute;
+  right: 0;
+  top: 2px;
 }
 
 .charts {
   position: relative;
 
-  height: 525px;
+  height: 460px;
   width: 100%;
 }
 
@@ -73,16 +83,19 @@
 }
 
 .bubble {
-  border-radius: 6px;
+  border-radius: 16px;
   box-shadow: 0 0 1px rgba(0, 0, 0, .3), 0 1px 2px rgba(0, 0, 0, .3);
+  min-width: 200px;
   position: absolute;
   top: 0;
   left: 0;
   padding: 8px 15px;
   pointer-events: none;
 
-  .dark & {
+  .night & {
+    background-color: #1C2533;
     box-shadow: 0 0 1px rgba(0, 0, 0, .5), 0 1px 2px rgba(0, 0, 0, .5);
+    color: #ffffff;
   }
 }
 
@@ -92,6 +105,7 @@
 
 .bubbleDate {
   font-size: 17px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -112,4 +126,25 @@
 .bubbleVal {
   font-size: 20px;
   font-weight: 400;
+}
+
+.table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+
+  td {
+    vertical-align: top;
+  }
+}
+
+.tdPercents {
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.tdValue {
+  text-align: right;
 }

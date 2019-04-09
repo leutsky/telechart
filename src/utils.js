@@ -1,221 +1,208 @@
-const TYPE_X = 'x';
-// const DATE_OPTIONS = {
-//   day: 'numeric',
-//   month: 'short',
-// };
-const FIRST_INDEX = 1;
-const X_LABEL_WIDTH = 80;
+import {
+  DAY_SHORT_NAMES,
+  MONTH_SHORT_NAMES,
+  MONTH_FULL_NAMES, FIRST_INDEX,
+} from './constants';
 
-const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export function hasStatePercentage(state) {
+  let has = false;
 
-function prepareXAxisData(id, column) {
-  const dates = new Array(column.length);
-  const labels = new Array(column.length);
+  state.yAxes.forEach((axis) => {
+    if (axis.visible) {
+      has = has || axis.percentage;
+    }
+  });
 
-  for (let i = FIRST_INDEX; i < column.length; i += 1) {
-    const date = new Date(column[i]);
+  return has;
+}
 
-    dates[i] = date;
-    // labels[i] = (date.toLocaleDateString('hc', DATE_OPTIONS));
-    labels[i] = formatDate(date);
-  }
-
+export function prepareData(id, column, type, dataset) {
   return {
     id,
-    type: TYPE_X,
     column,
-    dates,
-    labels,
+    type,
+    color: dataset.colors[id],
+    name: dataset.names[id],
+    visible: true,
+    groupId: null,
+    yAxis: null,
+    stacked: false,
+    opacity: 1,
+    power: 1,
+    transitions: [],
   };
 }
 
-function prepareMinMax(column) {
-  const indexMin = new Array(column.length);
-  const indexMax = new Array(column.length);
-  let minValue = column[FIRST_INDEX];
-  let maxValue = column[FIRST_INDEX];
+export function makeTransition(obj, prop, ts, duration, endValue) {
+  obj.transitions.push([prop, ts, duration, obj[prop], endValue]);
+}
 
-  for (let idx = FIRST_INDEX; idx < column.length; idx += 1) {
-    const val = column[idx];
+export function clearTransitions(obj) {
+  obj.transitions.length = 0; // eslint-disable-line
+}
 
-    minValue = Math.min(minValue, val);
-    maxValue = Math.max(maxValue, val);
+const T_PROP = 0;
+const T_START_TS = 1;
+const T_DURATION = 2;
+const T_START_VALUE = 3;
+const T_END_VALUE = 4;
 
-    for (let i = idx + 1; i < column.length; i += 1) {
-      if (!indexMax[idx] && val < column[i]) {
-        indexMax[idx] = i;
-      }
+export function haveTransitions(obj) {
+  return Boolean(obj.transitions.length);
+}
 
-      if (!indexMin[idx] && val > column[i]) {
-        indexMin[idx] = i;
-      }
-
-      if (indexMax[idx] && indexMin[idx]) {
-        break;
+export function hasTransition(obj, name) {
+  if (haveTransitions(obj)) {
+    for (let i = 0; i < obj.transitions.length; i += 1) {
+      if (obj.transitions[i][T_PROP] === name) {
+        return true;
       }
     }
   }
 
-  return {
-    indexMax,
-    indexMin,
-    maxValue,
-    minValue,
-  };
+  return false;
 }
 
-export function prepareDataset(source) {
-  const result = {
-    data: {},
-    length: 0,
-    firstIndex: FIRST_INDEX,
-    lastIndex: 0,
-    order: [],
-    x: null,
-  };
-
-  if (!Array.isArray(source.columns)) {
-    return null;
+export function applyTransitions(obj, currentTs) {
+  if (!haveTransitions(obj)) {
+    return 0;
   }
 
-  source.columns.forEach((sourceColumn) => {
-    const id = sourceColumn[0];
-    const column = sourceColumn;
-    const type = source.types[id];
+  const { transitions } = obj;
+  let remindTransitions = transitions.length;
 
-    if (type === TYPE_X) {
-      result.x = prepareXAxisData(id, column);
-    } else {
-      result.order.push(id);
-      result.data[id] = {
-        id,
-        column,
-        type: source.types[id],
-        name: source.names[id],
-        color: source.colors[id],
-        visible: true,
-        ...prepareMinMax(column),
-      };
+  for (let i = 0; i < transitions.length; i += 1) {
+    const t = transitions[i];
+    const startValue = t[T_START_VALUE];
+    const endValue = t[T_END_VALUE];
+    let nextValue = startValue + (currentTs - t[T_START_TS]) * (endValue - startValue) / t[T_DURATION];
+
+    if ((startValue > endValue && nextValue <= endValue)
+      || (startValue <= endValue && nextValue >= endValue)
+    ) {
+      nextValue = endValue;
+      remindTransitions -= 1;
     }
-  });
 
-  result.length = result.x.column.length;
-  result.lastIndex = result.length - 1;
-
-  return result;
-}
-
-function getExtremum(data, indexes, startIndex, endIndex) {
-  let i = startIndex;
-
-  while (indexes[i] && indexes[i] <= endIndex) {
-    i = indexes[i];
+    // eslint-disable-next-line
+    obj[t[T_PROP]] = nextValue;
   }
 
-  return data[i];
+  if (transitions.length && !remindTransitions) {
+    // eslint-disable-next-line
+    transitions.length = 0;
+  }
+
+  return remindTransitions;
 }
 
-export function getDatasetMinMax(dataset, startIndex, endIndex) {
-  let max = -Infinity;
-  let min = -max;
+export const log10 = Math.log10 || (x => Math.log(x) / Math.LN10);
 
-  dataset.order.forEach((id) => {
-    const data = dataset.data[id];
-
-    if (!data.visible) {
-      return;
-    }
-
-    max = Math.max(max, getExtremum(data.column, data.indexMax, startIndex, endIndex));
-    min = Math.min(min, getExtremum(data.column, data.indexMin, startIndex, endIndex));
-  });
-
-  return {
-    max,
-    min,
-  };
-}
-
-function updateAxisY(stateAxisY, extr, ticks = 6) {
-  const range = 1.025 * extr.max - extr.min;
-
+export function getMinMax(column, startIndex, endIndex, mm) {
   /* eslint-disable no-param-reassign */
-  if (ticks < 2) {
-    ticks = 2;
-  } else if (ticks > 2) {
-    ticks -= 1;
+  let { min, max } = mm;
+
+  for (let idx = startIndex; idx <= endIndex; idx += 1) {
+    if (column[idx] > max) {
+      max = column[idx];
+    }
+
+    if (column[idx] < min) {
+      min = column[idx];
+    }
   }
+  /* eslint-enable no-param-reassign */
+
+  return { min, max };
+}
+
+export function calcYTicks(min, max, ticks = 5) {
+  const range = (max - min) * 0.75;
 
   const tempStep = range / ticks;
-  const mag = Math.floor(Math.log10(tempStep));
-  const magPow = 10 ** mag;
+  const mag = Math.floor(log10(tempStep));
+  const magPow = Math.pow(10, mag); // eslint-disable-line
   const magMsd = Math.floor(tempStep / magPow + 0.5);
-  const step = magPow * magMsd;
+  let step = magPow * magMsd;
 
-  stateAxisY.min = step * Math.floor(extr.min / step);
-  stateAxisY.max = step * Math.ceil(extr.max / step);
-  stateAxisY.tickStep = step;
-  /* eslint-enable no-param-reassign */
+  const nextMin = step * Math.floor(min / step);
+  let nextMax = step * Math.ceil(max / step);
+  let nextTicks = Math.round((nextMax - nextMin) / step);
+
+  // TODO: проверить на маленьких числах
+  if (nextTicks > ticks) {
+    step = step < 10 ? step + 1 : Math.round(step * nextTicks / ticks);
+    nextMax = nextMin + step * ticks;
+  } else if (nextTicks < ticks) {
+    nextMax = Math.round(step * ticks);
+  }
+
+  return {
+    min: nextMin,
+    max: nextMax,
+    step,
+  };
+  /* eslint-enable no-param-reassign, no-restricted-properties */
 }
 
-export function updateAxisX(stateAxisX, state) {
-  const {
-    firstIndex, lastIndex, startIndex, endIndex, stepX,
-  } = state;
-  const tmpStep = Math.round(X_LABEL_WIDTH / stepX);
+export function calcXTickStep(scale, tickWidth) {
+  const tmpStep = Math.round(tickWidth / scale);
 
   let tickStep = 1;
   while (tickStep < tmpStep) {
     tickStep *= 2;
   }
 
-  const labelEndIndex = lastIndex - 7;
-
-  let labelFirstIndex = labelEndIndex % tickStep;
-  while (labelFirstIndex < firstIndex) {
-    labelFirstIndex += tickStep;
-  }
-
-  let labelStartIndex = startIndex - ((startIndex - labelFirstIndex) % tickStep);
-  if (labelStartIndex < firstIndex) {
-    labelStartIndex += tickStep;
-  }
-
-  const nextEndIndex = endIndex - ((endIndex - labelFirstIndex) % tickStep);
-
-  /* eslint-disable no-param-reassign */
-  stateAxisX.startIndex = labelStartIndex;
-  stateAxisX.endIndex = nextEndIndex;
-  stateAxisX.tickStep = tickStep;
-  /* eslint-enable no-param-reassign */
+  return tickStep;
 }
 
-export function updateChartsState(dataset, state, range, vp) {
-  const { firstIndex, lastIndex } = dataset;
-  const realWidth = vp.width / (range[1] - range[0]);
+export function correctXStartIndex(startIndex, tickStep) {
+  while (startIndex < FIRST_INDEX) {
+    startIndex += tickStep; // eslint-disable-line
+  }
 
-  /* eslint-disable no-param-reassign */
-  state.firstIndex = firstIndex;
-  state.lastIndex = lastIndex;
-  state.startIndex = Math.floor((lastIndex - firstIndex) * range[0]) + firstIndex;
-  state.endIndex = Math.ceil(lastIndex * range[1]);
-
-  updateAxisY(state.axisY, getDatasetMinMax(dataset, state.startIndex, state.endIndex));
-
-  const { axisY } = state;
-
-  state.stepX = realWidth / lastIndex;
-  state.stepY = vp.height / (axisY.max - axisY.min);
-  state.offsetX = -realWidth * range[0];
-  state.offsetY = axisY.min * state.stepY;
-
-  updateAxisX(state.axisX, state);
-  /* eslint-enable no-param-reassign */
+  return startIndex;
 }
 
-export const createViewport = (x, y, width, height, cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0) => ({
-  x, y, width, height, cx0, cy0, cx1, cy1,
+export function formatHHMM(d) {
+  return `${d.getUTCHours()}:${d.getUTCMinutes()}`;
+}
+
+export function formatDMn(d) {
+  return `${d.getUTCDate()} ${MONTH_SHORT_NAMES[d.getUTCMonth()]}`;
+}
+
+export function formatDMonth(d) {
+  return `${d.getUTCDate()} ${MONTH_FULL_NAMES[d.getUTCMonth()]}`;
+}
+
+export function formatDMonthYYYY(d) {
+  return `${formatDMonth(d)} ${d.getUTCFullYear()}`;
+}
+
+export function formatDayDMnYYYY(d) {
+  return `${DAY_SHORT_NAMES[d.getUTCDay()]}, ${formatDMn(d)} ${d.getUTCFullYear()}`;
+}
+
+export function formatPercentage() {
+
+}
+
+function getRAF() {
+  return window.requestAnimationFrame
+    || window.webkitRequestAnimationFrame
+    || window.mozRequestAnimationFrame
+    || window.oRequestAnimationFrame
+    || window.msRequestAnimationFrame
+    || function (callback) {
+      return window.setTimeout(callback, 1000 / 60);
+    };
+}
+
+export const rAF = getRAF();
+
+export const createViewport = (x, y, width, height) => ({
+  x, y, width, height,
 });
 
 export function createEl(tagName, cls, attrs) {
@@ -235,20 +222,15 @@ export function createEl(tagName, cls, attrs) {
   return el;
 }
 
-export function getContext(canvas) {
-  return canvas.getContext('2d');
+export function addClass(el, className) {
+  const newClassName = `${el.className} ${className}`;
+  // eslint-disable-next-line no-param-reassign
+  el.className = newClassName.trim();
 }
 
-export function getPixelRatio() {
-  return window.devicePixelRatio || 1;
-}
-
-export function rAF(cb) {
-  return window.requestAnimationFrame(cb);
-}
-
-export function cAF(requestId) {
-  return window.cancelAnimationFrame(requestId);
+export function removeClass(el, className) {
+  // eslint-disable-next-line no-param-reassign
+  el.className = el.className.replace(className, '').replace(/\s/g, ' ').trim();
 }
 
 export function hideEl(el) {
@@ -259,16 +241,6 @@ export function hideEl(el) {
 export function showEl(el) {
   // eslint-disable-next-line no-param-reassign
   el.style.display = null;
-}
-
-export function addClass(el, className) {
-  // eslint-disable-next-line no-param-reassign
-  el.className += ` ${className}`;
-}
-
-export function removeClass(el, className) {
-  // eslint-disable-next-line no-param-reassign
-  el.className = el.className.replace(className, '').replace(/\s/g, ' ').trim();
 }
 
 export function onEvent(el, eventNames, cb, options) {
@@ -301,12 +273,4 @@ export function bindObjectMethods(object, methods) {
       object[name] = object[name].bind(object);
     }
   });
-}
-
-function formatDate(date) {
-  return `${monthShortNames[date.getUTCMonth()]} ${date.getUTCDate()}`;
-}
-
-export function formatDateDay(date) {
-  return `${dayShortNames[date.getUTCDay()]}, ${formatDate(date)}`;
 }

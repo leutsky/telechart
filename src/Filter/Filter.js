@@ -2,33 +2,38 @@ import { createEl, addClass, removeClass } from '../utils';
 
 import styles from './Filter.scss';
 
-function checkboxTpl(id, item) {
-  const input = `<input class="${styles.input}" name="${id}" type="checkbox" ${item.visible ? 'checked' : ''}>`;
-  const icon = `<div class="${styles.icon}" style="color:${item.color}"></div>`;
+function checkboxTpl(item) {
+  const input = `<input class="${styles.input}" name="${item.id}" type="checkbox" ${item.visible ? 'checked' : ''}>`;
+  const icon = `<div class="${styles.icon}"></div>`;
+  const name = `<div class="${styles.label}">${item.name}</div>`
 
-  return `<label class="${styles.checkbox}">${input}${icon}${item.name}</label>`;
+  return `<label class="${styles.checkbox}" style="color:${item.color}">${input}${icon}${name}</label>`;
 }
 
 export default class Filter {
-  constructor(dataset, onChange, themeName) {
-    this.themeName = themeName;
-    this.dataset = dataset;
-    this.$el = createEl('div', `${styles.filter} ${styles[themeName]}`);
+  constructor(state, onChange) {
+    this.themeName = null;
+    this.state = state;
+    this.$el = createEl('div', styles.filter);
     this.render();
 
     this.$el.addEventListener('change', ({ target: { name, checked } }) => onChange(name, checked));
   }
 
   setTheme(themeName) {
-    removeClass(this.$el, styles[this.themeName]);
-    addClass(this.$el, styles[themeName]);
+    if (this.themeName) {
+      removeClass(this.$el, styles[this.themeName]);
+    }
 
+    addClass(this.$el, styles[themeName]);
     this.themeName = themeName;
   }
 
   render() {
-    const { data, order } = this.dataset;
+    const { data } = this.state;
 
-    this.$el.innerHTML = order.reduce((html, id) => html + checkboxTpl(id, data[id]), '');
+    if (data.length > 1) {
+      this.$el.innerHTML = data.reduce((html, item) => html + checkboxTpl(item), '');
+    }
   }
 }

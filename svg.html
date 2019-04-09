@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+  <svg id="svg" height="600" width="1200" viewBox="0 0 1200 600">
+    <g id="gr">
+      <path id="path" d="M0 0" stroke="#000" stroke-width="2" fill="none" pointer-events="none"></path>
+    </g>
+  </svg>
+
+<script>
+  const svg = document.getElementById('svg');
+  const path = document.getElementById('path');
+  const gr = document.getElementById('gr');
+
+  let pathD = 'M0 0';
+  const n = 1000;
+  const step = 5;
+  let offsetX;
+  let rAFIdx;
+
+  for (let i = 0; i < n; i++) {
+    pathD += ` L${i * step} ${Math.round(Math.random() * 600)}`;
+  }
+
+  path.setAttribute('d', pathD);
+
+  svg.addEventListener('mousemove', e => {
+    offsetX = e.offsetX;
+    window.cancelAnimationFrame(rAFIdx);
+    rAFIdx = window.requestAnimationFrame(move);
+  });
+
+  function move() {
+    gr.setAttribute('transform', `translate(-${n * step * offsetX / 600} 0)`)
+  }
+
+</script>
+</body>
+</html>

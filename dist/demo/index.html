@@ -2,66 +2,16 @@
 <html>
   <head>
     <title>Leutsky: Chart library</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      body {
-        font-family: "Helvetica Neue", Helvetica, Arial , Verdana, sans-serif;
-        margin: 0;
-        padding: 0 20px;
-        position: relative;
-      }
-
-      .layout {
-        margin: 40px auto 0;
-        max-width: 1000px;
-        padding-bottom: 100px;
-        position: relative;
-      }
-
-      .footer {
-        background-color: inherit;
-        bottom: 0;
-        box-shadow: 0 -2px 3px rgba(0,0,0,0.2);
-        height: auto;
-        left: 0;
-        padding: 24px;
-        position: fixed;
-        right: 0;
-        text-align: center;
-        top: auto;
-      }
-
-      .switcher {
-        cursor: pointer;
-        font-size: 24px;
-      }
-
-      .switcher:hover {
-        opacity: 0.8;
-      }
-
-      .light {
-        color: #1E1E1E;
-        background-color: #ffffff;
-      }
-
-      .dark {
-        color: white;
-        background-color: #262F3D;
-      }
-
-      .chartContainer {
-        margin-bottom: 64px;
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+    <link href="./index.css" rel="stylesheet">
     <link href="../chart.css" rel="stylesheet">
   </head>
-  <body class="light">
-    <div class="layout" id="layout"></div>
-    <div class="footer">
-      <span class="switcher" id="switcher">Toggle themes</span>
+  <body class="themeDay">
+    <div class="header" id="header">
+      <span class="switcher" id="switcher"></span>
     </div>
+    <div class="layout" id="layout"></div>
     <script src="../chart.js"></script>
-    <script src="./index.js"></script>
-  </body>
+  <script src="index.js"></script>
+</body>
 </html>

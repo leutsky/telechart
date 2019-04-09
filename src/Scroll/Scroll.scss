@@ -1,33 +1,101 @@
 .scroll {
-  position: absolute;
-  top: auto;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  border-radius: 8px;
   height: 57px;
+  margin-top: 22px;
+  position: relative;
   user-select: none;
+}
 
-  .leftHand, .rightHand, .centerHand {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
+.canvas {
+  border-radius: inherit;
+  height: 100%;
+  width: 100%;
+}
+
+.cover {
+  border-radius: inherit;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transform: translateZ(0);
+  width: auto;
+
+  .day & {
+    background-color: rgba(226, 238, 249, .6);
   }
 
-  .leftHand, .rightHand {
-    width: 6px;
-    cursor: ew-resize;
-  }
-
-  .centerHand {
-    width: auto;
-    cursor: pointer;
-    cursor: grab;
+  .night & {
+    background-color: rgba(48, 66, 89, .6);
   }
 }
 
-.cursorGrabbing {
+.slider {
+  border-radius: 8px;
+  bottom: -1px;
+  position: absolute;
+  top: -1px;
+  transform: translateZ(0);
+  width: auto;
+
+  .day & {
+    color: #C0D1E1;
+  }
+
+  .night & {
+    color: #56626D;
+  }
+}
+
+.leftHand, .rightHand, .centerHand {
+  bottom: 0;
+  position: absolute;
+  top: 0;
+}
+
+.leftHand, .rightHand {
+  background-color: currentColor;
+  cursor: ew-resize;
+  width: 15px;
+
+  &:after {
+    background-color: #ffffff;
+    border-radius: 3px;
+    content: '';
+    display: block;
+    height: 15px;
+    left: 6px;
+    position: absolute;
+    top: 21px;
+    width: 3px;
+  }
+
+  .day & {
+    box-shadow: 0 0 0 2px #ffffff;
+  }
+}
+
+.leftHand {
+  border-radius: 8px 0 0 8px;
+}
+
+.rightHand {
+  border-radius: 0 8px 8px 0;
+  right: 0;
+}
+
+.centerHand {
+  border-bottom: 2px solid currentColor;
+  border-top: 2px solid currentColor;
   cursor: pointer;
-  cursor: grabbing;
+  cursor: grab;
+  left: 15px;
+  right: 15px;
+  width: auto;
+
+  &:active {
+    cursor: pointer;
+    cursor: grabbing;
+  }
 }

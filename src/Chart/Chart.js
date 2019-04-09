@@ -1,165 +1,268 @@
 import Filter from '../Filter';
 import Scroll from '../Scroll';
+import State from '../State';
+import {
+  X_AXIS_HEIGHT,
+} from '../constants';
 import {
   clearRect,
-  drawGrid,
   drawCharts,
   drawCursor,
-  drawXLabels,
-  drawYLabels,
+  drawXAxis,
+  drawYAxes,
+  getContext,
+  getPixelRatio,
 } from '../drawing';
+import * as themes from './themes';
 import {
   bindObjectMethods,
-  createEl, createViewport,
-  formatDateDay,
-  getContext,
-  getOffsetX,
-  getPixelRatio,
-  offEvent, onEvent,
-  prepareDataset,
+  createViewport,
+  hasStatePercentage,
+  createEl, addClass, removeClass,
+  onEvent, offEvent,
   showEl, hideEl,
-  addClass, removeClass,
-  rAF,
-  updateChartsState,
+  formatDayDMnYYYY,
+  formatDMonthYYYY,
+  rAF, getOffsetX,
 } from '../utils';
 
 import styles from './Chart.scss';
 
-import * as themes from './themes';
-
-function chartTpl(theme) {
-  const $el = createEl('div', `${styles.chartWrap} ${styles[theme]}`);
-  const $header = createEl('div', styles.header);
-  const $charts = createEl('div', styles.charts);
-  const $chartsCanvas = createEl('canvas', styles.canvas);
-  const $deskCanvas = createEl('canvas', styles.canvas);
-  const $cursorZone = createEl('div', styles.cursorZone);
-  const $bubble = createEl('div', styles.bubble);
-  const $noData = createEl('div', styles.noData);
-  $noData.innerText = 'No data to view';
-  hideEl($bubble);
-  hideEl($noData);
-
-  $cursorZone.appendChild($bubble);
-  $charts.appendChild($chartsCanvas);
-  $charts.appendChild($deskCanvas);
-  $charts.appendChild($cursorZone);
-  $charts.appendChild($noData);
-  $el.appendChild($header);
-  $el.appendChild($charts);
-
-  return {
-    $el, $header, $charts, $chartsCanvas, $deskCanvas, $cursorZone, $bubble, $noData,
-  };
+function tableTpl(content) {
+  return `<table class="${styles.table}"><tbody>${content}</tbody></table>`;
 }
 
-function bubbleTpl(dataset, index) {
-  const header = `<div class="${styles.bubbleDate}">${formatDateDay(dataset.x.dates[index])}</div>`;
+function tableRowTpl(name, value, color, percents, percentage) {
+  let cells = '';
+
+  if (percentage) {
+    cells += `<td class="${styles.tdPercents}">${percents >> 0}%</td>`; // eslint-disable-line
+  }
+
+  cells += `<td class="${styles.tdName}">${name}</td>`;
+  cells += `<td class="${styles.tdValue}" style="color: ${color};">${value}</td>`;
+
+  return `<tr>${cells}</tr>`;
+}
+
+function bubbleTpl(state, index) {
+  const { data, xAxis: { dates } } = state;
+  const hasPercentage = hasStatePercentage(state);
   let items = '';
 
-  dataset.order.forEach((id) => {
-    const data = dataset.data[id];
+  const header = `<div class="${styles.bubbleDate}">${formatDayDMnYYYY(dates[index])}</div>`;
 
-    if (!data.visible) {
+  data.forEach((dataItem) => {
+    if (!dataItem.visible) {
       return;
     }
 
-    items += `<div class="${styles.bubbleItem}" style="color: ${data.color};"><div class="${styles.bubbleVal}">${data.column[index]}</div>${data.name}</div>`;
+    const {
+      color, column, name, yAxis,
+    } = dataItem;
+    const percents = yAxis.percentage ? (column[index] * 100 / yAxis.totalStacked[index]) : null;
+
+    items += tableRowTpl(name, column[index], color, percents, hasPercentage);
   });
 
-  const content = `<div class="${styles.bubbleContent}">${items}</div>`;
+  const content = `<div class="${styles.bubbleContent}">${tableTpl(items)}</div>`;
 
   return `<div class="${styles.bubbleWrap}">${header}${content}</div>`;
 }
 
 export default class Chart {
-  constructor(container, headerText, sourceData, themeName) {
-    bindObjectMethods(this, ['handleFilterChange', 'handleScrollChange']);
-
-    this.themeName = themeName;
-    this.theme = themes[themeName];
-    this.dataset = prepareDataset(sourceData);
-    this.state = {
-      axisY: {},
-      axisX: {},
+  constructor(container, headerText, sourceData, theme) {
+    this.theme = null;
+    this.themeName = null;
+    this.defaultRange = [0.75, 1];
+    this.state = new State(sourceData);
+    this.changes = {
+      range: null,
+      visible: null,
     };
-    this.previewState = {
-      axisY: {},
-      axisX: {},
-    };
+    this.drawing = false;
 
-    // init: DOM model
-    Object.assign(this, chartTpl(themeName));
+    this.initDom(container);
+    this.initScroll();
+    this.initFilter();
+    this.initContext();
+    this.initCursor();
+
+    bindObjectMethods(this, ['redraw']);
+
+    this.setHeader(headerText);
+    this.setTheme(theme);
+
+    this.update();
+  }
+
+  initDom(container) {
+    this.$el = createEl('div', styles.chartWrap);
+    this.$header = createEl('div', styles.header);
+    this.$range = createEl('div', styles.range);
+    this.$charts = createEl('div', styles.charts);
+    this.$chartsCanvas = createEl('canvas', styles.canvas);
+    this.$deskCanvas = createEl('canvas', styles.canvas);
+    this.$cursorZone = createEl('div', styles.cursorZone);
+    this.$bubble = createEl('div', styles.bubble);
+    hideEl(this.$bubble);
+
+    this.$cursorZone.appendChild(this.$bubble);
+    this.$charts.appendChild(this.$chartsCanvas);
+    this.$charts.appendChild(this.$deskCanvas);
+    this.$charts.appendChild(this.$cursorZone);
+    this.$el.appendChild(this.$header);
+    this.$el.appendChild(this.$range);
+    this.$el.appendChild(this.$charts);
+
     container.appendChild(this.$el);
+  }
 
-    // prepare: Contexts
+  initContext() {
     this.chartsCtx = getContext(this.$chartsCanvas);
     this.deskCtx = getContext(this.$deskCanvas);
+    this.previewCtx = getContext(this.scroll.$canvas);
+  }
 
-    this.$header.innerText = headerText;
-
-    // init: Scroll
-    this.scroll = new Scroll(this.deskCtx, [0.75, 1], 0.01, this.handleScrollChange);
-    this.scroll.theme = this.theme;
-    this.$charts.appendChild(this.scroll.$el);
-
-    // init: Filter
-    this.filter = new Filter(this.dataset, this.handleFilterChange, themeName);
+  initFilter() {
+    this.filter = new Filter(this.state, (id, visible) => this.setVisible(id, visible));
     this.$el.appendChild(this.filter.$el);
+  }
 
-    // init: Cursor
+  initScroll() {
+    this.scroll = new Scroll(this.defaultRange, 0.01, range => this.setRange(range));
+    this.$el.appendChild(this.scroll.$el);
+    this.scroll.update();
+  }
+
+  initCursor() {
     bindObjectMethods(this, ['handleCursorStart', 'handleCursorMove', 'handleCursorEnd']);
     this.showCursor = false;
     this.cursorIndex = null;
     onEvent(this.$cursorZone, 'mouseenter,touchstart', this.handleCursorStart);
-
-    this.update();
-    this.redrawPreview();
-    this.redrawCharts();
   }
 
-  destroy() {
-    this.scroll.destroy();
-    this.detachCursorEvents();
+  update() {
+    this.updateScene();
+    this.state.prepareXAxis(this.vp.main.width);
+    this.scroll.update();
+    this.state.setRange(this.scroll.range, true);
+    this.draw();
+    this.drawPreview();
+    this.updateRange();
+  }
+
+  updateScene() {
+    const { $chartsCanvas, $deskCanvas, scroll: { $canvas: $previewCanvas } } = this;
+    const { offsetHeight: mainHeight, offsetWidth: mainWidth } = $chartsCanvas;
+    const { offsetHeight: previewHeight, offsetWidth: previewWidth } = $previewCanvas;
+    const pixelRatio = getPixelRatio();
+
+    /* eslint-disable no-param-reassign */
+    [$chartsCanvas, $deskCanvas, $previewCanvas].forEach((canvas) => {
+      canvas.height = canvas.offsetHeight * pixelRatio;
+      canvas.width = canvas.offsetWidth * pixelRatio;
+    });
+    /* eslint-enable no-param-reassign */
+
+    this.vp = {
+      main: createViewport(0, 0, mainWidth, mainHeight),
+      charts: createViewport(0, 0, mainWidth, mainHeight - X_AXIS_HEIGHT),
+      preview: createViewport(0, 0, previewWidth, previewHeight),
+    };
+  }
+
+  updateRange() {
+    const { startIndex, endIndex, xAxis: { dates } } = this.state;
+
+    this.$range.innerText = `${formatDMonthYYYY(dates[startIndex])} - ${formatDMonthYYYY(dates[endIndex])}`;
+  }
+
+  setHeader(text) {
+    this.$header.innerText = text;
   }
 
   setTheme(themeName) {
-    removeClass(this.$el, styles[this.themeName]);
-    addClass(this.$el, styles[themeName]);
+    if (this.themeName !== themeName) {
+      if (this.theme) {
+        removeClass(this.$el, styles[this.themeName]);
+      }
 
-    this.theme = themes[themeName];
-    this.themeName = themeName;
-    this.scroll.theme = this.theme;
-    this.filter.setTheme(themeName);
-
-    this.update();
-    this.redrawPreview();
-    this.redrawCharts();
-  }
-
-  setHeader(name) {
-    this.$header.innerText = name;
-  }
-
-  handleFilterChange(id, visible) {
-    this.dataset.data[id].visible = visible;
-
-    let canShow = false;
-    this.dataset.order.forEach((id) => {
-      canShow = canShow || this.dataset.data[id].visible;
-    });
-
-    if (canShow) {
-      hideEl(this.$noData);
-      this.redrawCharts();
-      this.redrawPreview();
-    } else {
-      showEl(this.$noData);
+      addClass(this.$el, styles[themeName]);
+      this.theme = themes[themeName];
+      this.themeName = themeName;
+      this.scroll.setTheme(themeName);
+      this.filter.setTheme(themeName);
+      this.update();
     }
   }
 
-  handleScrollChange() {
-    this.redrawCharts();
+  setRange(range) {
+    this.changes.range = range;
+    this.scheduleChanges();
+  }
+
+  setVisible(id, visible) {
+    this.changes.visible = { id, visible };
+    this.scheduleChanges();
+  }
+
+  scheduleChanges() {
+    if (!this.drawing) {
+      this.drawing = true;
+
+      rAF(this.redraw);
+    }
+  }
+
+  redraw(ts) {
+    const { changes, state } = this;
+
+    state.ts = ts;
+    state.tick();
+
+    if (changes.range) {
+      state.setRange(changes.range);
+      changes.range = null;
+    } else if (changes.visible) {
+      state.setVisible(changes.visible.id, changes.visible.visible);
+      changes.visible = null;
+      this.drawPreview();
+    } else {
+      this.drawPreview();
+    }
+
+    this.updateRange();
+    this.draw();
+
+    if (state.haveTransitions) {
+      rAF(this.redraw);
+    } else {
+      this.drawing = false;
+    }
+  }
+
+  draw() {
+    const { theme } = this;
+
+    clearRect(this.chartsCtx, this.vp.main);
+    drawCharts(this.chartsCtx, this.state, this.vp.charts, false, 3, theme);
+    clearRect(this.deskCtx, this.vp.main);
+    this.drawAxes();
+  }
+
+  drawPreview() {
+    if (this.scroll.visible) {
+      clearRect(this.previewCtx, this.vp.preview);
+      drawCharts(this.previewCtx, this.state, this.vp.preview, true);
+    }
+  }
+
+  drawAxes() {
+    const { theme } = this;
+
+    drawYAxes(this.deskCtx, this.state, this.vp.charts, theme);
+    drawXAxis(this.deskCtx, this.state, this.vp.main, theme);
   }
 
   // start: Cursor
@@ -192,49 +295,14 @@ export default class Chart {
     this.hideCursor();
   }
 
-  // end: Cursor
-
-  update() {
-    this.updateScene();
-    this.redrawCharts();
-    this.redrawPreview();
-  }
-
-  updateScene() {
-    const { offsetHeight: vpHeight, offsetWidth: vpWidth } = this.$chartsCanvas;
-    const pixelRatio = getPixelRatio();
-
-    /* eslint-disable no-param-reassign */
-    [this.$chartsCanvas, this.$deskCanvas].forEach((canvas) => {
-      canvas.height = vpHeight * pixelRatio;
-      canvas.width = vpWidth * pixelRatio;
-    });
-    /* eslint-enable no-param-reassign */
-
-    this.vp = {
-      grid: createViewport(0, 0, vpWidth, 450),
-      charts: createViewport(0, 0, vpWidth, 420, 0, 0, 0, 10),
-      preview: createViewport(0, vpHeight - 55, vpWidth, 50, 0, 10, 0, 10),
-    };
-
-    this.scroll.update();
-  }
-
-  updateState() {
-    updateChartsState(this.dataset, this.state, this.scroll.range, this.vp.charts);
-  }
-
-  updatePreviewState() {
-    updateChartsState(this.dataset, this.previewState, [0, 1], this.vp.preview);
-  }
-
   moveCursor(x) {
     const {
-      deskCtx, dataset, state, vp, theme,
+      deskCtx, state, vp, theme,
     } = this;
 
     rAF(() => {
-      let index = Math.round((x - state.offsetX) / state.stepX);
+      const { xAxis } = state;
+      let index = Math.round((x / vp.charts.width - xAxis.offset) / xAxis.scale);
 
       if (index < state.startIndex) {
         index = state.startIndex;
@@ -244,30 +312,29 @@ export default class Chart {
 
       if (this.cursorIndex !== index) {
         this.cursorIndex = index;
-        this.redrawBubble();
-        drawCursor(deskCtx, dataset, state, index, vp.charts, theme);
+        this.renderBubble();
+        clearRect(deskCtx, this.vp.main);
+        drawCursor(deskCtx, state, index, vp.charts, theme);
+        this.drawAxes();
       }
     });
   }
 
   hideCursor() {
-    const {
-      deskCtx, vp,
-    } = this;
-
     this.showCursor = false;
     this.cursorIndex = null;
     this.detachCursorEvents();
     hideEl(this.$bubble);
 
     rAF(() => {
-      clearRect(deskCtx, vp.charts);
+      clearRect(this.deskCtx, this.vp.main);
+      this.drawAxes();
     });
   }
 
-  redrawBubble() {
+  renderBubble() {
     const {
-      $bubble, dataset, state, cursorIndex, vp,
+      $bubble, state, cursorIndex, vp,
     } = this;
 
     if (!this.showCursor) {
@@ -275,57 +342,23 @@ export default class Chart {
     }
     showEl($bubble);
 
-    $bubble.innerHTML = bubbleTpl(dataset, cursorIndex);
+    const { xAxis } = state;
+
+    $bubble.innerHTML = bubbleTpl(state, cursorIndex);
 
     const bubbleWidth = $bubble.offsetWidth;
-    const bubbleHalfWidth = Math.round(bubbleWidth / 2);
-    const cursorX = Math.round(state.stepX * cursorIndex + state.offsetX);
-    let bubbleX = cursorX - bubbleHalfWidth;
 
-    if (bubbleX < 0) {
-      bubbleX = 0;
-    } else if (bubbleX > vp.charts.width - bubbleWidth) {
-      bubbleX = vp.charts.width - bubbleWidth;
+    const stepX = xAxis.scale * vp.main.width;
+    const offsetX = xAxis.offset * vp.main.width;
+    const cursorX = Math.round(cursorIndex * stepX + offsetX);
+
+    let bubbleX = cursorX - bubbleWidth - 20;
+
+    if (bubbleX < 20) {
+      bubbleX = cursorX + 20;
     }
 
     $bubble.style.left = `${bubbleX}px`;
   }
-
-  redrawCharts() {
-    const {
-      chartsCtx, dataset, state, vp, theme,
-    } = this;
-
-
-    rAF((ts) => {
-      this.updateState(ts);
-
-      this.scroll.redrawSlider();
-      clearRect(chartsCtx, vp.grid);
-      drawGrid(chartsCtx, vp.grid, theme);
-      drawCharts(chartsCtx, dataset, state, vp.charts, 3);
-      drawYLabels(chartsCtx, state, vp.grid, theme);
-      drawXLabels(chartsCtx, dataset.x.labels, state, vp.grid, theme);
-    });
-  }
-
-  redrawPreview() {
-    const {
-      chartsCtx, dataset, previewState, vp,
-    } = this;
-
-    rAF((ts) => {
-      const prevMin = previewState.min;
-      const prevMax = previewState.max;
-
-      this.updatePreviewState(ts);
-
-      if (prevMax !== previewState.max || prevMin !== previewState.min) {
-
-      }
-
-      clearRect(chartsCtx, vp.preview);
-      drawCharts(chartsCtx, dataset, previewState, vp.preview);
-    });
-  }
+  // end: Cursor
 }

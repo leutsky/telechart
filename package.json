@@ -4,8 +4,9 @@
   "description": "",
   "main": "dist/chart.js",
   "scripts": {
-    "build": "rollup --config rollup/build.config.js",
-    "build-demo": "rollup --config rollup/demo.config.js"
+    "dev": "rollup -w --config rollup/dev-server.js",
+    "build": "rollup --config rollup/build-chart.js",
+    "build-demo": "rollup --config rollup/build-demo.js"
   },
   "author": "Alexander Leutsky",
   "license": "MIT",
@@ -28,7 +29,9 @@
     "rollup-plugin-babel": "^4.3.2",
     "rollup-plugin-babel-minify": "^8.0.0",
     "rollup-plugin-copy": "^0.2.3",
+    "rollup-plugin-generate-html-template": "^1.1.0",
     "rollup-plugin-json": "^4.0.0",
+    "rollup-plugin-livereload": "^1.0.0",
     "rollup-plugin-node-resolve": "^4.0.1",
     "rollup-plugin-postcss": "^2.0.3",
     "rollup-plugin-serve": "^1.0.1",
