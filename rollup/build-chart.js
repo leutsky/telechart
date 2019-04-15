@@ -32,8 +32,8 @@ export default {
     }),
     json(),
     babel(),
-    // terser({
-    //   compress: false,
-    // }),
+    terser({
+      compress: false,
+    }),
   ],
 };

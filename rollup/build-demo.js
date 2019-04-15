@@ -8,7 +8,7 @@ import babel from 'rollup-plugin-babel';
 export default {
   input: './src/demo/index.js',
   output: {
-    file: './dist/demo/index.js',
+    file: './dist/index.js',
     format: 'umd',
     name: 'demoData',
   },
@@ -27,7 +27,7 @@ export default {
     babel(),
     htmlTemplate({
       template: './src/demo/index.html',
-      target: './dist/demo/index.html',
+      target: './dist/index.html',
     }),
   ],
 };
