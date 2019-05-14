@@ -5,7 +5,7 @@ Supports web and mobile.
 
 IE isn't supported (need make another build config: es6 -> es5)
 
-Demo: https://aleutsky.github.io/telechart/demo/index.html
+Demo: https://aleutsky.github.io/telechart2/demo/index.html
 
 ```javascript
 import Chart from './src/Chart';
